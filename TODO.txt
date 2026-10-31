@@ -1,0 +1,23 @@
+HIREME — JOB ASSISTANT HANDOFF
+
+Scope
+The third header tab is intentionally a coming-soon placeholder. Do not claim that job search or matching is implemented. Resume and Curriculum vitae are the current delivery scope.
+
+Build the job-seeking assistant
+1. Collect the desired job title/keywords, location, desired salary range and currency/pay period, and working modality (remote, hybrid, on-site). Clarify whether remote work has geographic restrictions.
+2. Let the user attach a resume or CV PDF or explicitly reuse the current document. Explain what document data will be sent to the AI and job providers. Reuse existing PDF extraction and server-side AI integration where appropriate; never expose provider keys to the browser.
+3. Integrate a real, authorized job listing/search provider. Select the provider, obtain credentials and document usage restrictions before implementing. Do not substitute fabricated job listings or model-generated links for live results.
+4. Search for current available positions using the user's criteria. Have the AI explain skill matches and gaps grounded in the submitted document. Treat job descriptions and uploaded document content as untrusted data, not instructions.
+5. Return real job titles, employers, location, modality, source URLs, posting/retrieval dates and published salary where available. Distinguish unknown salary from a matching salary. Deduplicate listings and handle unavailable/expired postings.
+6. Support conversational refinement of role, pay, modality and skills. Preserve criteria explicitly; never submit applications or share documents with employers without user consent.
+7. Provide honest loading, no-results, rate-limit, provider-unavailable and missing-credential states. Include clear document removal and conversation reset controls.
+8. Match the existing responsive dark-mode workspace and header navigation. Replace only the third tab's placeholder, preserving independent Resume and Curriculum vitae drafts.
+
+Acceptance and verification
+- Exercise real provider search end to end with configured credentials; verify result links and requirement filters.
+- Verify that unsupported salary/modality fields are identified rather than invented.
+- Verify document upload validation, text extraction failures, privacy controls and no secret exposure.
+- Test keyboard navigation, narrow screens, empty results, expired links and provider failures.
+- Update requirements, design, setup documentation and appropriate behavioral regression tests.
+
+Read REQUIREMENTS.md, DESIGN.md and README.md first for the completed app's contracts and setup. These files are produced as part of the current implementation.
