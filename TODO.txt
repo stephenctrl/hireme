@@ -3,6 +3,13 @@ HIREME — JOB ASSISTANT HANDOFF
 Scope
 The third header tab is intentionally a coming-soon placeholder. Do not claim that job search or matching is implemented. Resume and Curriculum vitae are the current delivery scope.
 
+Continuation checkpoint — 2026-11-01
+- Read REQUIREMENTS.md, DESIGN.md and README.md; delegated provider-policy research and codebase integration mapping to read-only scout agents.
+- User selected Adzuna. Provider setup and usage restrictions are recorded in README.md under "Selected jobs provider — implementation prerequisite".
+- Blocked before implementation by item 3: ADZUNA_APP_ID and ADZUNA_APP_KEY are not configured in the environment or a local .env file. OPENAI_API_KEY is also absent, so live AI matching cannot be verified.
+- Next action: configure credentials locally, never in chat or a VITE_ variable. Then verify authenticated Adzuna access and establish shared search/analysis contracts before parallel backend/frontend implementation.
+- Keep the placeholder until the real workflow is implemented. No job-search feature or acceptance criterion is complete.
+
 Build the job-seeking assistant
 1. Collect the desired job title/keywords, location, desired salary range and currency/pay period, and working modality (remote, hybrid, on-site). Clarify whether remote work has geographic restrictions.
 2. Let the user attach a resume or CV PDF or explicitly reuse the current document. Explain what document data will be sent to the AI and job providers. Reuse existing PDF extraction and server-side AI integration where appropriate; never expose provider keys to the browser.

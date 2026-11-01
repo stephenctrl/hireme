@@ -27,6 +27,22 @@ If you change `PORT`, also adjust the API proxy target in `vite.config.ts` for d
 
 With no configured key, AI actions explain that `OPENAI_API_KEY` must be configured on the server. There is no fake AI fallback. Manual editing, extraction, and PDF export remain available.
 
+## Selected jobs provider — implementation prerequisite
+
+**Adzuna was selected for the Job assistant continuation. Search and matching are not implemented yet.** `TODO.txt` requires obtaining credentials and documenting usage restrictions before implementation.
+
+Register through the [Adzuna developer portal](https://developer.adzuna.com/overview) to obtain an app ID and key. Configure `ADZUNA_APP_ID` and `ADZUNA_APP_KEY` only in the local server environment or uncommitted `.env`; these are the planned integration settings, not settings consumed by the current app. Never paste credentials into chat or use a `VITE_` prefix. Live AI matching also needs the existing `OPENAI_API_KEY` configuration below.
+
+The [Adzuna API terms](https://developer.adzuna.com/docs/terms_of_service) impose these constraints:
+
+- Personal job search is a permitted use. The free tier is for evaluation; actual account limits and paid plans are shown in the provider account and may change.
+- Organisational use has a 14-day validation trial, not permission for ongoing work or research. Continued organisational use needs written consent; revenue- or lead-generating products need a licence. Do not assume this local app's planned personal use authorises public or commercial deployment.
+- Each displayed advert must carry a linked "Adzuna" label at least 116 × 23 pixels, pointing to the relevant Adzuna country domain. Preserve provider-supplied result links; do not replace them with model-generated URLs.
+- Salary estimates have additional Jobsworth attribution requirements and must not be represented as employer-published salary. Prefer omitting estimates from published-salary matching.
+- On termination, remove acquired Adzuna data from website pages. Do not build indefinite retention into the integration.
+
+Implementation must also preserve the provider's actual field limitations: unsupported modality, unknown pay period/currency, missing salary, and predicted salary are not verified matches. Confirm account access and current terms before implementing; this section does not claim an authenticated search has succeeded.
+
 ## Optional AI configuration
 
 The server reads `.env` through `dotenv`. Defaults:
