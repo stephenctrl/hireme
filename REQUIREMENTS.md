@@ -2,7 +2,7 @@
 
 ## Scope and priority
 
-Hireme is a local-first web application for preparing truthful, readable application documents. Deliver the **Resume** and **Curriculum vitae** tabs; the **Job assistant** tab is deliberately deferred. Requirements and functional acceptance criteria below precede the implementation design in `DESIGN.md`.
+Hireme is a local-first web application for preparing truthful application documents and researching job opportunities. Delivery covers **Resume**, **Curriculum vitae**, and the **Job assistant**. Requirements and functional acceptance criteria below precede the implementation design in `DESIGN.md`. Live job search requires authorised Adzuna credentials; live AI actions require a configured compatible provider. Missing credentials must not prevent implementation, local verification, or manual document workflows.
 
 ## Functional acceptance criteria
 
@@ -26,19 +26,19 @@ Hireme is a local-first web application for preparing truthful, readable applica
 
 ### Contextual assistant
 
-- **F10 — Context:** Each functional tab has a separate assistant conversation. Requests include the active tab's current document and target job, plus any uploaded source belonging to that tab. The assistant can critique and suggest concrete improvements based on this context.
+- **F10 — Context:** Each document tab has a separate assistant conversation. Requests include that tab's current document and target job, plus any uploaded source belonging to it. The assistant can critique and suggest concrete improvements based on this context. The Job assistant has its own separately consented context under J02 and J06.
 - **F11 — Suggestions:** A chat reply can include a proposed revised document. Show a clear Apply suggestion control only when a valid proposed document exists. Applying replaces only the active tab's document, retaining its original source and leaving the other tab untouched. Users can discard a proposal.
 - **F12 — Truthfulness and configuration:** AI uses a real OpenAI-compatible HTTP provider through the local server. The API key never enters the client bundle, local storage, or API responses. Without a configured key, manual editing/extraction/export still function and AI actions explain what server configuration is missing.
 
-### Persistence, privacy, and deferred scope
+### Persistence, privacy, and job integration
 
-- **F13 — Draft persistence:** Drafts are independent and remain available when switching tabs. Browser persistence is opt-in and clearly labelled as local to this browser. When enabled, persist document fields, target job, and source text for both tabs; disclose that source CV content is included. Conversations are session-only. Disabling persistence removes the saved copy. A Clear all drafts action clears both drafts, sources, conversations, and the saved copy after confirmation.
+- **F13 — Draft persistence:** Drafts are independent and remain available when switching tabs. Browser persistence is opt-in and clearly labelled as local to this browser. When enabled, persist document fields, target job, and source text for both document tabs; disclose that source CV content is included. Conversations and all job-workspace state are session-only. Disabling persistence removes the saved copy. A Clear all drafts action clears both drafts, sources, all conversations, job-workspace state, and the saved copy after confirmation.
 - **F14 — Data handling:** Extraction and PDF rendering are in memory, without server-side file retention. AI disclosure states that clicking an AI action sends the supplied document/source/job/conversation to the configured provider. Do not send document content for analytics or log it on the server. Provider retention remains subject to that provider's policy.
-- **F15 — Deferred Job assistant:** The third tab is a polished, explicitly unavailable placeholder. It performs no fake search or matching. `TODO.txt` describes future matching by role, salary/pay, work modality, and uploaded CV, plus the need for a real jobs source and matching implementation.
+- **F15 — Job assistant:** The third tab provides the criteria, explicit document attachment, provider-backed candidate search, grounded AI discussion, and refinement workflow defined by J01–J08. Missing configuration is an actionable state, never a trigger for fabricated listings or model-generated source links.
 
-### Planned Job assistant delivery — not implemented
+### Job assistant acceptance criteria
 
-The following criteria define the next delivery from `TODO.txt`; they do not change F15's description of the current app. Adzuna is the selected provider. Implementation remains gated on server-side credentials and confirmed authorised account access.
+Adzuna is the selected search provider. Implement and validate the complete workflow locally; distinguish controlled-provider checks from authenticated Adzuna and live AI acceptance. Account credentials gate the latter checks, not the implementation.
 
 - **J01 — Explicit criteria:** Collect role/keywords, provider country, location, desired salary bounds, currency and pay period, modality, and skills. For remote work, distinguish worldwide eligibility from a restricted region and an unanswered restriction question. Preserve criteria independently of Resume/CV.
 - **J02 — Document consent:** Permit a validated PDF upload or an explicit snapshot of either existing document. Reuse never silently attaches an original source or follows later document edits. Explain which fields/source text are attached. Extraction alone sends nothing to AI or Adzuna. Document removal clears job-analysis context without modifying Resume/CV.
@@ -46,8 +46,8 @@ The following criteria define the next delivery from `TODO.txt`; they do not cha
 - **J04 — Honest filtering:** Keep requested criteria visible beside the criteria used in the provider query. Identify unsupported filters and unverified listing fields. Unknown salary, predicted salary, missing pay period/currency, unspecified remote geography, and unknown modality cannot count as verified matches. Employment type is not work modality.
 - **J05 — Grounded analysis:** Use only explicitly attached document facts and server-retrieved listing excerpts. Explain supported skill matches and requirements not evidenced in the document; absence of evidence is not proof the applicant lacks a skill. Identify incomplete provider descriptions. Uploaded text, descriptions, and history cannot override server instructions. AI cannot create vacancies or source URLs.
 - **J06 — Conversational refinement:** Keep job chat separate from document chat. Show proposed criteria changes for explicit application; retain unchanged criteria and require an explicit search to refresh results. This workflow does not submit applications, contact employers, or transmit documents to Adzuna/employers. The configured AI provider receives document context only after an explicit AI action and its disclosure.
-- **J07 — States and lifecycle:** Show loading, no-results, unsupported-filter, rate-limit, provider-unavailable, missing-credential, and unavailable-listing states. Distinguish an unavailable listing from an unverified link. Provide separate remove-document, reset-conversation, and reset-job-workspace controls. Late responses must not restore removed documents, reset conversations, or superseded results.
-- **J08 — Isolation and verification:** Replace only the third tab's placeholder after the real workflow is complete. Preserve both drafts and their storage contract. Job state is session-only, survives tab switches, and is included in confirmed Clear all drafts. Exercise authenticated search, source links, filters, document failures/privacy, provider failures, keyboard use, narrow screens, and behavioural regressions before claiming completion.
+- **J07 — States and lifecycle:** Show loading, no-results, unsupported-filter, rate-limit, provider-unavailable, missing-credential, and expired-search-context states. Explain that provider search presence does not prove a vacancy remains open. Provide a session-only dismissal for listings the user finds unavailable; never present dismissal as provider-confirmed expiry. Provide separate remove-document, reset-conversation, and reset-job-workspace controls. Late responses must not restore removed documents, reset conversations, or superseded results.
+- **J08 — Isolation and verification:** Replace only the third tab's placeholder with the real workflow. Preserve both drafts and their storage contract. Job state is session-only, survives tab switches, and is included in confirmed Clear all drafts. Exercise search, filters, document failures/privacy, provider failures, keyboard use, narrow screens, and behavioural regressions. Verify authenticated provider search and result links when credentials are available, reporting them as unverified otherwise.
 
 ## Operational requirements
 
@@ -56,7 +56,7 @@ The following criteria define the next delivery from `TODO.txt`; they do not cha
 - Validate request bodies and provider output on the server. Restrict upload size and reject oversized AI contexts rather than silently discarding facts.
 - Errors must not expose keys, provider response bodies, file contents, or stack traces. A health endpoint reports AI availability without revealing credentials.
 - The provider base URL and model are configurable. Browser requests use same-origin `/api` paths; the development server proxies them to the API server.
-- No accounts, database, remote persistence, OCR, job integrations, or authentication are in this delivery. A network-exposed deployment requires a separate security review; the documented default server binds to loopback.
+- No accounts, database, remote draft persistence, OCR, application submission, or user authentication are in this delivery. Adzuna job search is the sole jobs-provider integration. A network-exposed deployment requires a separate security review; the documented default server binds to loopback.
 
 ## Acceptance walkthrough for the implementation owner/tester
 
@@ -66,6 +66,6 @@ The following criteria define the next delivery from `TODO.txt`; they do not cha
 4. With a real provider configured, personalize a resume and organize a CV. Confirm proposals require Apply, retain source data, preserve facts, and never affect the other tab.
 5. Chat separately in both tabs; verify contextual critique and explicit application/discarding of a returned proposal. Exercise missing key, provider/network failures, and malformed provider output without losing drafts.
 6. Verify opt-in save/reload, source-text privacy notice, removal of stored copies on disable, and confirmed clearing of all drafts.
-7. Confirm the Job assistant is visibly deferred and `TODO.txt` describes the requested future behavior.
+7. Exercise the Job assistant with explicit criteria and document consent. Verify missing Adzuna/AI configuration independently; with configured credentials verify live candidates and links. Exercise unsupported salary/modality/geography, empty results, provider failures, expired search context, attachment removal, proposed-criteria review, all reset controls, independent drafts, keyboard focus, and narrow-screen layout. Controlled-provider checks do not establish live-provider success.
 
 These are acceptance instructions, not a claim that tests have been executed.

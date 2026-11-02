@@ -96,6 +96,7 @@ export interface ChatMessage {
 export interface HealthResponse {
   status: 'ok';
   aiConfigured: boolean;
+  jobsConfigured: boolean;
 }
 export interface ExtractPdfResponse {
   source: UploadedSource;
@@ -127,6 +128,11 @@ export type ApiErrorCode =
   | 'AI_PROVIDER_ERROR'
   | 'AI_INVALID_RESPONSE'
   | 'AI_TIMEOUT'
+  | 'JOBS_NOT_CONFIGURED'
+  | 'JOBS_RATE_LIMITED'
+  | 'JOBS_PROVIDER_ERROR'
+  | 'JOBS_TIMEOUT'
+  | 'JOB_CONTEXT_EXPIRED'
   | 'INTERNAL_ERROR';
 export interface ApiError {
   error: {
@@ -223,11 +229,11 @@ Render all user/provider text as React text, not raw HTML. AI suggestions are pr
 
 The frontend developer owns usable empty/error/loading states and the backend developer owns reliable error envelopes and configuration docs. Main integrates packages and scripts, starts the local system, exercises the requirements walkthrough, checks multi-page PDF output, and reports concrete failures back to the owning developer. No paid-provider success should be claimed if no credentials are available; in that case test missing-key behavior and explicitly report live AI as unexercised.
 
-`TODO.txt` is owned by Main and contains only the deferred Job assistant scope, not unfinished work for the first two tabs. README documents setup, manual usage without credentials, provider JSON-mode requirement, privacy, PDF/text/font limitations, and the local-only security boundary. This design does not claim any implementation or check has run.
+`TODO.txt` is owned by Main and records delivery status and outstanding external acceptance, not unfinished work disguised as completed features. README documents setup, provider usage restrictions, manual usage without credentials, privacy, PDF/text/font limitations, and the local-only security boundary. Verification claims must identify what was actually exercised.
 
-## 8. Planned Job assistant continuation contract
+## 8. Job assistant
 
-**Status: design only; no job routes, types, or controls below are implemented.** This section defines the next delivery's interfaces for parallel work. Existing sections describe the Resume/CV delivery. `TODO.txt` item 3 still gates implementation on configured Adzuna credentials and confirmed account access. Do not replace the placeholder or report search success on the strength of this design.
+**Implementation contract:** this section defines the Job assistant delivery's interfaces for parallel work. The user has authorised implementation and controlled-provider validation without credentials. Only authenticated Adzuna and live AI acceptance remain gated on configured credentials and authorised account access. Do not claim live-provider success from configuration presence or controlled fixtures.
 
 ### 8.1 Ownership and provider boundary
 
@@ -240,105 +246,20 @@ The frontend developer owns usable empty/error/loading states and the backend de
 
 ### 8.2 Shared job contracts
 
-Define these separately from the existing document contracts. The following is the canonical shape for the planned API; fields are required unless explicitly nullable.
+Canonical exports live in [`shared/jobs.ts`](shared/jobs.ts), separate from the document contracts. Both client and server import them; do not maintain a competing interface copy in either layer.
 
-```ts
-type PayPeriod = 'hour' | 'day' | 'week' | 'month' | 'year';
-type WorkModality = 'any' | 'remote' | 'hybrid' | 'on-site';
-type CheckStatus = 'not_requested' | 'matched' | 'not_matched' | 'unverified';
+| Contract | Responsibility |
+| --- | --- |
+| `JobCriteria` | Requested role, country/location, salary bounds/currency/period, modality, remote eligibility and skills |
+| `JobListing` | Provider identity/provenance, safe source URL, description excerpt, dates, explicit salary/modality unknowns and per-criterion checks |
+| `JobSearchRequest` / `JobSearchResponse` | Criteria/page in; opaque snapshot ID, applied query, candidates, limitations and retrieval date out |
+| `JobAssistantRequest` | Explicit attached facts, current criteria, conversation, snapshot and selected listing IDs; never browser-authored listings |
+| `SkillEvidence` / `JobAssistantResponse` | Quoted match/gap evidence, per-listing limitations and an unapplied criteria proposal |
 
-interface JobCriteria {
-  keywords: string;
-  country: string;
-  location: string;
-  salary: {
-    minimum: number | null;
-    maximum: number | null;
-    currency: string;
-    period: PayPeriod;
-  };
-  modality: WorkModality;
-  remoteEligibility: 'unspecified' | 'worldwide' | 'restricted';
-  remoteRegion: string;
-  skills: string[];
-}
-
-interface CriterionCheck {
-  status: CheckStatus;
-  reason: string;
-}
-
-interface JobListing {
-  id: string;
-  title: string;
-  employer: string;
-  location: string;
-  modality: Exclude<WorkModality, 'any'> | 'unknown';
-  remoteRestrictions: string | null;
-  salary: {
-    minimum: number | null;
-    maximum: number | null;
-    currency: string | null;
-    period: PayPeriod | null;
-    provenance: 'published' | 'predicted' | 'unknown';
-  };
-  source: 'Adzuna';
-  sourceUrl: string;
-  postedAt: string | null;
-  retrievedAt: string;
-  descriptionExcerpt: string;
-  checks: Record<'role' | 'location' | 'salary' | 'modality'
-    | 'remoteEligibility' | 'skills', CriterionCheck>;
-}
-
-interface JobSearchRequest {
-  criteria: JobCriteria;
-  page: number;
-}
-
-interface JobSearchResponse {
-  searchId: string;
-  criteria: JobCriteria;
-  appliedQuery: Record<string, string>;
-  limitations: string[];
-  listings: JobListing[];
-  page: number;
-  total: number | null;
-  retrievedAt: string;
-}
-
-interface JobAssistantRequest {
-  action: 'chat' | 'analyze';
-  criteria: JobCriteria;
-  searchId: string | null;
-  listingIds: string[];
-  document: ResumeDocument | null;
-  sourceText: string;
-  messages: ChatMessage[];
-}
-
-interface SkillEvidence {
-  requirement: string;
-  requirementQuote: string;
-  documentQuote: string | null;
-  explanation: string;
-}
-
-interface JobAssistantResponse {
-  reply: string;
-  proposedCriteria: JobCriteria | null;
-  analyses: {
-    listingId: string;
-    matches: SkillEvidence[];
-    gaps: SkillEvidence[];
-    limitations: string[];
-  }[];
-}
-```
 
 `country` must belong to the provider's documented supported countries; the UI uses a labelled selector rather than accepting an arbitrary path. Money uses finite, nonnegative values, optional one-sided bounds, minimum not exceeding maximum, and an ISO currency code. A restricted remote search requires a nonblank region; an unanswered restriction remains explicit. Dates are ISO timestamps when the provider supplies an unambiguous timestamp; otherwise use `null`, not an invented posting date.
 
-Reuse strict Zod document/message validation and its existing size ceilings. Bound job keywords/location/region to 500 characters each, skills to 50 nonblank entries of at most 100 characters, page to a positive integer, and each result page to 20 listings. Provider excerpts and AI contexts must be bounded before parsing or serialisation; reject oversized analysis context rather than silently discarding document facts. Validate incoming API shapes and outgoing AI shapes on the server.
+Reuse strict Zod document validation and its existing size ceilings. Bound job keywords/location/region to 200 characters each, skills to 20 nonblank entries of at most 80 characters, salary bounds to finite nonnegative values at most one billion, pages to integers 1–1000, and each result page to 20 listings. Job history allows 20 messages: user messages at most 4,000 characters and assistant messages at most 10,000, matching the accepted reply limit without truncation. The combined job request remains bounded to 150,000 characters. Provider excerpts and AI contexts must be bounded before parsing or serialisation; reject oversized analysis context rather than silently discarding document facts. Validate incoming API shapes and outgoing AI shapes on the server.
 
 ### 8.3 Search and evidence semantics
 
@@ -352,11 +273,11 @@ Structured modality and remote eligibility are unknown unless supported by actua
 
 Render unverified candidates explicitly as candidates, never as positions meeting every requested requirement. Any unmet or unverified criterion stays visible. Skills mentioned in a listing are requirements/context, not evidence the applicant possesses them. A provider keyword search establishes retrieval relevance, not semantic proof that all role requirements match.
 
-Store only retrieved public listing data, original criteria, page, and any provider re-query reference in a bounded, request-independent server snapshot keyed by an opaque `searchId`; no documents or conversations belong in that snapshot. Retain snapshots for at most ten minutes and at most twenty searches per local app instance; this is an application bound, not a provider-required cache TTL. Expired/evicted snapshots require a new search and must not fall back to browser-supplied listing descriptions.
+Store only retrieved public listing data, original criteria and page in a bounded, request-independent server snapshot keyed by an opaque `searchId`; no documents or conversations belong in that snapshot. Retain snapshots for at most ten minutes and at most twenty searches per local app instance; this is an application bound, not a provider-required cache TTL. Expired/evicted snapshots require a new search and must not fall back to browser-supplied listing descriptions.
 
 `POST /api/jobs/assistant` accepts `JobAssistantRequest`. `chat` needs a nonblank final user message; `analyze` needs an attached nonempty document/source and selected listing IDs. Limit selection to five listings per analysis. The server resolves every ID from the named unexpired search snapshot. Requests cannot introduce arbitrary job URLs or descriptions. Criteria that differ from the snapshot require a new search before analysing those results.
 
-Before analysing a selected listing, use Adzuna's documented re-query mechanism where available. An explicit provider not-found/unavailable response removes it from analysis with an actionable error. Absence from a paginated search alone does not prove expiry. If currentness cannot be established, disclose that limitation; neither an earlier search response nor an HTTP redirect proves the employer is still hiring. Do not crawl third-party employer sites or follow arbitrary URLs server-side to test availability. Users open provider-supplied result links themselves.
+Currentness remains explicitly unverified. Adzuna's schema mentions an `adref` re-query reference, but the reviewed official endpoint documentation provides no callable `ad` route/status contract; do not invent one. Neither presence in a paginated search nor an HTTP redirect proves an employer is still hiring. Show retrieval dates and this limitation; allow the user to dismiss a listing they find unavailable, without claiming provider-confirmed expiry. A new search can refresh candidates, not certify employer availability. Do not crawl third-party employer sites or follow arbitrary URLs server-side. Users open provider-supplied result links themselves. Adzuna search HTTP 410 means authorisation failure, not listing expiry.
 
 ### 8.4 AI and error boundaries
 
@@ -364,18 +285,17 @@ Reuse server-side AI configuration, JSON-mode transport conventions, the 60-seco
 
 The AI response can propose full criteria but cannot apply them. Display a field-by-field change review and require explicit application; unchanged criteria must remain unchanged. A later search is a separate explicit action. Reject analysis IDs outside the selected server-resolved listings, duplicate IDs, or malformed/oversized output. A supported match requires a document quote and a requirement quote found in the supplied context; validate quoted substrings after consistent whitespace normalisation. Gap records require a listing requirement quote and describe only missing document evidence, not an asserted lack of skill. Quotes establish provenance, not proof that the model's interpretation is correct; retain review warnings.
 
-Use existing `INVALID_REQUEST`, `PAYLOAD_TOO_LARGE`, and `AI_*` codes where applicable. Add job-specific errors to the shared error union when implementing:
+Use existing `INVALID_REQUEST`, `PAYLOAD_TOO_LARGE`, and `AI_*` codes where applicable, plus these job-specific errors:
 
 | HTTP | Code | Meaning |
 | --- | --- | --- |
 | 503 | `JOBS_NOT_CONFIGURED` | One or both server credential settings are absent |
 | 429 | `JOBS_RATE_LIMITED` | Provider quota/rate limit; include safe retry guidance, never the upstream body |
 | 502 | `JOBS_PROVIDER_ERROR` | Provider rejected access, returned malformed data, or could not be reached |
-| 504 | `JOBS_TIMEOUT` | Upstream search/re-query timed out |
+| 504 | `JOBS_TIMEOUT` | Upstream search timed out |
 | 410 | `JOB_CONTEXT_EXPIRED` | Search snapshot expired or was evicted; search again |
-| 410 | `JOB_UNAVAILABLE` | Selected listing explicitly reported unavailable by the provider |
 
-Extend health with `jobsConfigured: boolean` only at implementation time. It means both credential settings are present, not that authentication, quota, or live search has been verified. Missing AI configuration must not prevent a configured jobs search; missing jobs configuration must not affect manual editing/extraction/export.
+Health includes `jobsConfigured: boolean`. It means both credential settings are present, not that authentication, quota, or live search has been verified. Missing AI configuration must not prevent a configured jobs search; missing jobs configuration must not affect manual editing/extraction/export.
 
 ### 8.5 Frontend isolation and privacy lifecycle
 
@@ -393,6 +313,6 @@ Preserve the current responsive dark-mode conventions, semantic labels, visible 
 
 ### 8.6 Implementation and verification gate
 
-Once credentials are configured, verify one intentional authenticated Adzuna search without logging credential-bearing URLs or provider bodies. Confirm field availability, quota and attribution with the real account before implementing parallel backend/frontend slices against these contracts. If provider evidence requires a contract change, update it before dispatching work rather than inventing fields.
+Implement and exercise the application against controlled providers without requiring external credentials. When credentials are configured, verify an intentional authenticated Adzuna search without logging credential-bearing URLs or provider bodies, and check the real account's quota, fields and attribution. If actual provider evidence requires a contract change, update it rather than inventing fields. Controlled-provider checks are not authenticated acceptance.
 
-Integration verification must exercise the actual UI and API: query and result links, explicit unsupported salary/modality/geography, document consent/removal, malformed and image-only PDFs, rate limits/unavailable listings/provider failure, snapshot expiry, stale responses after changes/reset, independent drafts, keyboard navigation, and narrow screens. Permanent regression tests cover those consumer-visible boundaries; mocked providers do not count as live-provider verification. No real search or AI success is implied by these planned contracts.
+Integration verification must exercise the actual UI and API: query and result links, explicit unsupported salary/modality/geography, document consent/removal, malformed and image-only PDFs, rate limits/unavailable listings/provider failure, snapshot expiry, stale responses after changes/reset, independent drafts, keyboard navigation, and narrow screens. Permanent regression tests cover those consumer-visible boundaries; controlled providers do not count as live-provider verification. Actual verification status and external acceptance prerequisites are recorded in `TODO.txt`.

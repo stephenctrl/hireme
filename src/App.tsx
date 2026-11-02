@@ -4,6 +4,7 @@ import type { AiRequest, ChatMessage, DocumentKind, ResumeDocument } from '../sh
 import { downloadPdf, errorMessage, extractPdf, health, requestAi } from './api';
 import DocumentEditor, { Field } from './DocumentEditor';
 import DocumentPreview from './DocumentPreview';
+import JobAssistant from './JobAssistant';
 import { emptyDrafts, hasContent, loadDrafts, STORAGE_KEY, type Draft, type Drafts } from './document';
 
 interface Proposal { document: ResumeDocument; reply: string; origin: string }
@@ -44,6 +45,7 @@ export default function App() {
   const [sessions, setSessions] = useState<Sessions>(() => ({ resume: { ...emptySession(), mode: initial.drafts.resume.source ? 'upload' : 'manual' }, cv: emptySession() }));
   const [aiStatus, setAiStatus] = useState<AiStatus>('checking');
   const [reviewing, setReviewing] = useState<DocumentKind | null>(null);
+  const [jobResetGeneration, setJobResetGeneration] = useState(0);
   const generations = useRef<Record<DocumentKind, number>>({ resume: 0, cv: 0 });
   const chatEnd = useRef<HTMLDivElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -86,9 +88,10 @@ export default function App() {
     setSaving(enabled);
   }
   function clearAll() {
-    if (!window.confirm('Clear both drafts, uploaded sources, conversations, and proposals? The saved browser copy will also be deleted. This cannot be undone.')) return;
+    if (!window.confirm('Clear both drafts, uploaded sources, conversations, proposals, and the entire job workspace? The saved browser copy will also be deleted. This cannot be undone.')) return;
     generations.current.resume += 1;
     generations.current.cv += 1;
+    setJobResetGeneration(current => current + 1);
     setDrafts(emptyDrafts());
     setSessions({ resume: emptySession(), cv: emptySession() });
     setReviewing(null);
@@ -173,20 +176,14 @@ export default function App() {
       <nav className="header-tabs" aria-label="Document workspace">
         <button className={active === 'resume' ? 'active' : ''} aria-current={active === 'resume' ? 'page' : undefined} onClick={() => setActive('resume')}>Resume</button>
         <button className={active === 'cv' ? 'active' : ''} aria-current={active === 'cv' ? 'page' : undefined} onClick={() => setActive('cv')}>Curriculum vitae</button>
-        <button className={active === 'jobs' ? 'active' : ''} aria-current={active === 'jobs' ? 'page' : undefined} onClick={() => setActive('jobs')}>Job assistant<span className="soon-tag">SOON</span></button>
+        <button className={active === 'jobs' ? 'active' : ''} aria-current={active === 'jobs' ? 'page' : undefined} onClick={() => setActive('jobs')}>Job assistant</button>
       </nav>
       <span className="header-note"><span className="status-dot" />A little clarity. A big next step.</span>
     </header>
 
     <main id="workspace" tabIndex={-1}>
-      {active === 'jobs' ? <div className="jobs-page">
-        <div className="coming-icon"><BriefcaseIcon /></div><span className="eyebrow">THE NEXT CHAPTER</span>
-        <h1>Good work deserves<br />the right opportunity.</h1>
-        <p>A more thoughtful job search is on the horizon. For now, let’s get your story ready.</p>
-        <div className="coming-features"><span>Role & pay preferences</span><span>Remote, hybrid, or on-site</span><span>CV-based matching</span></div>
-        <div className="coming-note"><LockKeyhole size={17} /><p><strong>Coming soon — not available yet.</strong> No search or matching runs here. The roadmap in <code>TODO.txt</code> includes a real jobs source and matching implementation.</p></div>
-        <button className="button primary" onClick={() => setActive('resume')}>Build your resume<ArrowRight size={17} /></button>
-      </div> : <>
+      <div hidden={active !== 'jobs'}><JobAssistant resumeDocument={drafts.resume.document} cvDocument={drafts.cv.document} resumeSource={drafts.resume.source} cvSource={drafts.cv.source} resetGeneration={jobResetGeneration} /></div>
+      {active !== 'jobs' && <>
         <section className="workspace-heading">
           <div><div className="eyebrow"><span className="tiny-line" />YOUR NEXT MOVE, WELL WRITTEN</div><h1>{kind === 'resume' ? 'Make your experience count.' : 'The whole story. Beautifully clear.'}</h1><p>{kind === 'resume' ? 'A focused resume. A confident first impression.' : 'Bring your experience together in a considered curriculum vitae.'}</p></div>
           <div className="heading-actions"><span className="private-badge"><ShieldCheck size={15} />Private by default</span><button className="button primary export-button" disabled={!hasContent(draft.document) || session.exporting} onClick={() => void exportDocument(kind)}>{session.exporting ? <LoaderCircle className="spin" size={17} /> : <ArrowDownToLine size={17} />}{session.exporting ? 'Preparing PDF…' : 'Export PDF'}</button></div>
@@ -240,11 +237,7 @@ export default function App() {
         </div>
       </>}
     </main>
-    <footer className="site-footer"><div className="footer-main"><div className="save-setting"><label className="save-checkbox"><input type="checkbox" checked={saving} onChange={event => changeSaving(event.target.checked)} /><span className="checkbox-visual" aria-hidden="true">{saving && <Check size={12} />}</span><span>Save drafts in this browser</span></label><span className="storage-detail">Opt-in only. Includes uploaded CV text. Conversations stay session-only.</span></div><button className="text-button clear-button" onClick={clearAll}><Trash2 size={13} />Clear all drafts</button></div><div className="footer-bottom"><p><LockKeyhole size={12} />Browser storage is not encrypted and may be accessible to others using this profile. Files are processed in memory; no server-side file retention.</p><span>MADE FOR YOUR NEXT CHAPTER<span className="footer-dot">✳</span></span></div>{storageNotice && <div className="storage-notice" role="status"><CircleHelp size={14} /><span>{storageNotice}</span><button className="icon-button" aria-label="Dismiss storage notice" onClick={() => setStorageNotice('')}><X size={14} /></button></div>}</footer>
+    <footer className="site-footer"><div className="footer-main"><div className="save-setting"><label className="save-checkbox"><input type="checkbox" checked={saving} onChange={event => changeSaving(event.target.checked)} /><span className="checkbox-visual" aria-hidden="true">{saving && <Check size={12} />}</span><span>Save drafts in this browser</span></label><span className="storage-detail">Opt-in Resume/CV only, including uploaded source text. Conversations and all job state stay session-only.</span></div><button className="text-button clear-button" onClick={clearAll}><Trash2 size={13} />Clear all drafts</button></div><div className="footer-bottom"><p><LockKeyhole size={12} />Browser storage is not encrypted and may be accessible to others using this profile. Files are processed in memory; no server-side file retention.</p><span>MADE FOR YOUR NEXT CHAPTER<span className="footer-dot">✳</span></span></div>{storageNotice && <div className="storage-notice" role="status"><CircleHelp size={14} /><span>{storageNotice}</span><button className="icon-button" aria-label="Dismiss storage notice" onClick={() => setStorageNotice('')}><X size={14} /></button></div>}</footer>
     {reviewing && sessions[reviewing].proposal && <ProposalDialog proposal={sessions[reviewing].proposal!} onClose={() => setReviewing(null)} onApply={() => applyProposal(reviewing)} onDiscard={() => { updateSession(reviewing, { proposal: null }); setReviewing(null); }} />}
   </div>;
-}
-
-function BriefcaseIcon() {
-  return <svg width="38" height="38" viewBox="0 0 40 40" fill="none" aria-hidden="true"><rect x="7" y="13" width="26" height="21" rx="4" stroke="currentColor" strokeWidth="1.5" /><path d="M15 13V9a3 3 0 0 1 3-3h4a3 3 0 0 1 3 3v4M7 21c8 5 18 5 26 0M20 22v5" stroke="currentColor" strokeWidth="1.5" /></svg>;
 }

@@ -1,31 +1,40 @@
-HIREME — JOB ASSISTANT HANDOFF
+HIREME — JOB ASSISTANT DELIVERY STATUS
 
 Scope
-The third header tab is intentionally a coming-soon placeholder. Do not claim that job search or matching is implemented. Resume and Curriculum vitae are the current delivery scope.
+Resume, Curriculum vitae and Job assistant are implemented. Job search uses the real server-only Adzuna integration; AI analysis uses the configured OpenAI-compatible provider. No fabricated production listings or fallback AI are supplied. Missing credentials are explicit configuration states.
 
-Continuation checkpoint — 2026-11-02
-- Read REQUIREMENTS.md, DESIGN.md and README.md; delegated provider-policy research and codebase integration mapping to read-only scout agents.
-- User selected Adzuna. Provider setup and usage restrictions are recorded in README.md under "Selected jobs provider — implementation prerequisite".
-- Defined planned acceptance criteria J01–J08 in REQUIREMENTS.md and shared search/analysis, evidence, state-isolation, privacy and lifecycle contracts in DESIGN.md section 8. No runtime job types/routes/UI have been added.
-- Blocked before implementation by item 3: ADZUNA_APP_ID and ADZUNA_APP_KEY are not configured in the environment or a local .env file. OPENAI_API_KEY is also absent, so live AI matching cannot be verified.
-- Next action: configure credentials locally, never in chat or a VITE_ variable. Then verify authenticated Adzuna access, confirm the planned contracts against actual provider fields, and implement backend/frontend in parallel using DESIGN.md section 8.
-- Keep the placeholder until the real workflow is implemented. No job-search feature or acceptance criterion is complete.
+Implementation — complete
+[x] 1. Collect role/keywords, provider country, location, desired salary bounds, currency/pay period, modality, skills and remote geographic restrictions.
+[x] 2. Attach a validated PDF or explicitly copy an independent Resume/CV snapshot. Original source text requires separate opt-in; extraction/reuse alone sends nothing to AI. Removal clears job context without editing either draft.
+[x] 3. Integrate Adzuna with server-only credentials, safe provider links, bounded requests, documented attribution/usage restrictions and no document transmission to the jobs provider.
+[x] 4. Implement candidate search and document-grounded AI skill matches/gaps. Validate server-resolved listing IDs and quoted evidence; treat provider descriptions, uploaded facts and history as untrusted data.
+[x] 5. Return titles, employers, location, source links, posting/retrieval dates and salary provenance. Deduplicate listings and explicitly identify unknown salary, pay period/currency, modality and remote eligibility rather than claiming verified matches.
+[x] 6. Support separate conversational refinement with explicit proposed-criteria application and a separate search action. Never submit applications or contact employers.
+[x] 7. Provide loading, empty, rate-limit, provider-unavailable, missing-credential and expired-context states; document removal, conversation/workspace reset and user-observed unavailable-listing dismissal.
+[x] 8. Replace the third-tab placeholder with the responsive dark-mode workspace. Preserve independent Resume/CV drafts and opt-in storage; job state stays session-only, survives tab switches and participates in confirmed Clear all drafts.
 
-Build the job-seeking assistant
-1. Collect the desired job title/keywords, location, desired salary range and currency/pay period, and working modality (remote, hybrid, on-site). Clarify whether remote work has geographic restrictions.
-2. Let the user attach a resume or CV PDF or explicitly reuse the current document. Explain what document data will be sent to the AI and job providers. Reuse existing PDF extraction and server-side AI integration where appropriate; never expose provider keys to the browser.
-3. Integrate a real, authorized job listing/search provider. Select the provider, obtain credentials and document usage restrictions before implementing. Do not substitute fabricated job listings or model-generated links for live results.
-4. Search for current available positions using the user's criteria. Have the AI explain skill matches and gaps grounded in the submitted document. Treat job descriptions and uploaded document content as untrusted data, not instructions.
-5. Return real job titles, employers, location, modality, source URLs, posting/retrieval dates and published salary where available. Distinguish unknown salary from a matching salary. Deduplicate listings and handle unavailable/expired postings.
-6. Support conversational refinement of role, pay, modality and skills. Preserve criteria explicitly; never submit applications or share documents with employers without user consent.
-7. Provide honest loading, no-results, rate-limit, provider-unavailable and missing-credential states. Include clear document removal and conversation reset controls.
-8. Match the existing responsive dark-mode workspace and header navigation. Replace only the third tab's placeholder, preserving independent Resume and Curriculum vitae drafts.
+Local acceptance — complete
+[x] Unsupported salary/modality/geography remain explicitly unverified. Predicted or unknown pay is not a verified published-salary match.
+[x] Actual multipart extraction, corrupt/non-PDF, image-only and oversized uploads, explicit original-source consent, removal, storage isolation and secret isolation exercised.
+[x] Actual browser keyboard navigation, Enter/Shift+Enter, visible focus, 320px/390px layouts without horizontal overflow, empty results, provider failures, unavailable-listing dismissal and expired search context exercised.
+[x] Actual browser search, quoted analysis, unapplied/applicable criteria proposals, independent drafts, document-AI proposal application and delayed-response cancellation exercised with isolated controlled providers.
+[x] Global Clear all drafts clears hidden job state and both documents; late AI responses do not restore cleared content.
+[x] Requirements, design, README, server environment template and behavioural regression tests updated.
 
-Acceptance and verification
-- Exercise real provider search end to end with configured credentials; verify result links and requirement filters.
-- Verify that unsupported salary/modality fields are identified rather than invented.
-- Verify document upload validation, text extraction failures, privacy controls and no secret exposure.
-- Test keyboard navigation, narrow screens, empty results, expired links and provider failures.
-- Update requirements, design, setup documentation and appropriate behavioral regression tests.
+Verification checkpoint
+- npm run build: PASS.
+- npm test: PASS, 15 tests.
+- Running application API smoke: PASS for ten scenario groups covering search, evidence, privacy, snapshots, validation, provider/AI errors and real PDF extraction.
+- Reproduced then fixed four integration defects: long-reply history round trips, criteria-only chat after search expiry, malformed-row response normalization and pagination through fully omitted pages. Confirmed fixes in the actual browser; backend regressions retained.
+- Credential-free actual HTTP PDF export: PASS, four selectable-text Unicode pages with final content preserved.
+- Controlled fixtures were used only in isolated tests/temporary verification, never as a production fallback. Authenticated provider success has not been claimed.
 
-Read REQUIREMENTS.md, DESIGN.md and README.md first for the completed app's contracts and setup. These files are produced as part of the current implementation.
+External acceptance — awaiting credentials only
+[ ] Configure ADZUNA_APP_ID and ADZUNA_APP_KEY locally, confirm authorised account access/quota, and exercise real authenticated searches, returned links and actual requirement filters.
+[ ] Configure OPENAI_API_KEY and the compatible provider/model, then exercise live job analysis/refinement and review evidence against the actual document and listings.
+- These checks do not block implementation or local acceptance. Never paste credentials into chat, commit them, or use a VITE_ prefix.
+
+Provider limitation
+The reviewed Adzuna public reference mentions adref but does not document a callable re-query route/status contract. Current vacancy availability is explicitly unverified; the app shows retrieval dates and lets users dismiss unavailable links, without inventing expiry or crawling employers. Unsupported salary/modality fields remain visible limitations.
+
+Read REQUIREMENTS.md, DESIGN.md section 8 and README.md for the delivered contracts, setup, privacy boundaries and provider usage restrictions.

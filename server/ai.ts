@@ -19,8 +19,18 @@ The user must explicitly apply any proposal; do not claim that a document has al
 The document schema is: ${JSON.stringify(z.toJSONSchema(documentSchema))}`;
 
 export async function requestAi(request: AiRequest, configuration: AiConfiguration): Promise<AiResponse> {
+  const parsed = await requestAiJson(request, configuration, systemInstructions);
+  const result = aiResponseSchema.safeParse(parsed);
+  if (!result.success || (result.data.document !== null && !documentWithinLimit(result.data.document)) || (request.action !== 'chat' && result.data.document === null)) {
+    throw new HttpError(502, 'AI_INVALID_RESPONSE', 'The AI provider returned a proposal that does not match the document schema or limits. Nothing has been applied; try again.');
+  }
+  return result.data;
+}
+
+// Shared transport only: callers retain their own instructions, schemas and evidence rules.
+export async function requestAiJson(context: unknown, configuration: AiConfiguration, instructions: string): Promise<unknown> {
   if (!configuration.apiKey.trim()) {
-    throw new HttpError(503, 'AI_NOT_CONFIGURED', 'AI is not configured. Set OPENAI_API_KEY on the server and restart it. Manual editing, PDF extraction, and export remain available.');
+    throw new HttpError(503, 'AI_NOT_CONFIGURED', 'AI is not configured. Set OPENAI_API_KEY on the server and restart it. Manual editing, PDF extraction, export, and configured job search remain available.');
   }
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 60_000);
@@ -37,8 +47,8 @@ export async function requestAi(request: AiRequest, configuration: AiConfigurati
         model: configuration.model,
         response_format: { type: 'json_object' },
         messages: [
-          { role: 'system', content: systemInstructions },
-          { role: 'user', content: JSON.stringify(request) },
+          { role: 'system', content: instructions },
+          { role: 'user', content: JSON.stringify(context) },
         ],
       }),
     });
@@ -78,11 +88,7 @@ export async function requestAi(request: AiRequest, configuration: AiConfigurati
     } catch {
       throw new HttpError(502, 'AI_INVALID_RESPONSE', 'The AI provider did not return a complete valid JSON proposal. Nothing has been applied; try again or check JSON-mode support.');
     }
-    const result = aiResponseSchema.safeParse(parsed);
-    if (!result.success || (result.data.document !== null && !documentWithinLimit(result.data.document)) || (request.action !== 'chat' && result.data.document === null)) {
-      throw new HttpError(502, 'AI_INVALID_RESPONSE', 'The AI provider returned a proposal that does not match the document schema or limits. Nothing has been applied; try again.');
-    }
-    return result.data;
+    return parsed;
   } catch (error) {
     if (controller.signal.aborted) {
       throw new HttpError(504, 'AI_TIMEOUT', 'The AI provider took longer than 60 seconds. Please try again.');

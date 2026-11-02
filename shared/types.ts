@@ -62,6 +62,7 @@ export interface ChatMessage {
 export interface HealthResponse {
   status: 'ok';
   aiConfigured: boolean;
+  jobsConfigured: boolean;
 }
 export interface ExtractPdfResponse {
   source: UploadedSource;
@@ -93,6 +94,11 @@ export type ApiErrorCode =
   | 'AI_PROVIDER_ERROR'
   | 'AI_INVALID_RESPONSE'
   | 'AI_TIMEOUT'
+  | 'JOBS_NOT_CONFIGURED'
+  | 'JOBS_RATE_LIMITED'
+  | 'JOBS_PROVIDER_ERROR'
+  | 'JOBS_TIMEOUT'
+  | 'JOB_CONTEXT_EXPIRED'
   | 'INTERNAL_ERROR';
 export interface ApiError {
   error: {

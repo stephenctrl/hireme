@@ -9,9 +9,14 @@ import { renderPdf } from './pdf.js';
 import { requestAi } from './ai.js';
 import type { AiConfiguration } from './ai.js';
 import { validateAi, validateExport } from './validation.js';
+import { createJobsService } from './jobs.js';
+import type { JobsConfiguration } from './jobs.js';
+import { validateJobAssistant, validateJobSearch } from './job-validation.js';
+import { requestJobAssistant } from './job-assistant.js';
 
 export interface AppConfiguration {
   ai: AiConfiguration;
+  jobs: JobsConfiguration;
   distDirectory: string;
 }
 
@@ -23,8 +28,13 @@ export function createApp(overrides: Partial<AppConfiguration> = {}) {
       model: process.env.OPENAI_MODEL?.trim() || 'gpt-4o-mini',
     },
     distDirectory: fileURLToPath(new URL('../dist/', import.meta.url)),
+    jobs: {
+      appId: process.env.ADZUNA_APP_ID ?? '',
+      appKey: process.env.ADZUNA_APP_KEY ?? '',
+    },
     ...overrides,
   };
+  const jobs = createJobsService(configuration.jobs);
   const app = express();
   app.disable('x-powered-by');
   app.use((_request, response, next) => {
@@ -38,7 +48,10 @@ export function createApp(overrides: Partial<AppConfiguration> = {}) {
   });
   api.use(express.json({ limit: '1mb', strict: true }));
   api.get('/health', (_request, response) => {
-    const health: HealthResponse = { status: 'ok', aiConfigured: Boolean(configuration.ai.apiKey.trim()) };
+    const health: HealthResponse = {
+      status: 'ok', aiConfigured: Boolean(configuration.ai.apiKey.trim()),
+      jobsConfigured: Boolean(configuration.jobs.appId.trim() && configuration.jobs.appKey.trim()),
+    };
     response.json(health);
   });
   const upload = multer({
@@ -69,6 +82,13 @@ export function createApp(overrides: Partial<AppConfiguration> = {}) {
   api.post('/ai', async (request, response) => {
     const input = validateAi(request.body);
     response.json(await requestAi(input, configuration.ai));
+  });
+  api.post('/jobs/search', async (request, response) => {
+    response.json(await jobs.search(validateJobSearch(request.body)));
+  });
+  api.post('/jobs/assistant', async (request, response) => {
+    const input = validateJobAssistant(request.body);
+    response.json(await requestJobAssistant(input, jobs.resolve(input), configuration.ai));
   });
   api.use((_request, _response, next) => next(new HttpError(404, 'INVALID_REQUEST', 'This API route does not exist.')));
   app.use('/api', api);
