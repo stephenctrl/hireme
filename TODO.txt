@@ -3,11 +3,12 @@ HIREME — JOB ASSISTANT HANDOFF
 Scope
 The third header tab is intentionally a coming-soon placeholder. Do not claim that job search or matching is implemented. Resume and Curriculum vitae are the current delivery scope.
 
-Continuation checkpoint — 2026-11-01
+Continuation checkpoint — 2026-11-02
 - Read REQUIREMENTS.md, DESIGN.md and README.md; delegated provider-policy research and codebase integration mapping to read-only scout agents.
 - User selected Adzuna. Provider setup and usage restrictions are recorded in README.md under "Selected jobs provider — implementation prerequisite".
+- Defined planned acceptance criteria J01–J08 in REQUIREMENTS.md and shared search/analysis, evidence, state-isolation, privacy and lifecycle contracts in DESIGN.md section 8. No runtime job types/routes/UI have been added.
 - Blocked before implementation by item 3: ADZUNA_APP_ID and ADZUNA_APP_KEY are not configured in the environment or a local .env file. OPENAI_API_KEY is also absent, so live AI matching cannot be verified.
-- Next action: configure credentials locally, never in chat or a VITE_ variable. Then verify authenticated Adzuna access and establish shared search/analysis contracts before parallel backend/frontend implementation.
+- Next action: configure credentials locally, never in chat or a VITE_ variable. Then verify authenticated Adzuna access, confirm the planned contracts against actual provider fields, and implement backend/frontend in parallel using DESIGN.md section 8.
 - Keep the placeholder until the real workflow is implemented. No job-search feature or acceptance criterion is complete.
 
 Build the job-seeking assistant

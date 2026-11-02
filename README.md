@@ -31,6 +31,8 @@ With no configured key, AI actions explain that `OPENAI_API_KEY` must be configu
 
 **Adzuna was selected for the Job assistant continuation. Search and matching are not implemented yet.** `TODO.txt` requires obtaining credentials and documenting usage restrictions before implementation.
 
+The planned acceptance criteria are J01–J08 in [REQUIREMENTS.md](REQUIREMENTS.md); API shapes, evidence rules, ownership, and privacy/reset boundaries are in [DESIGN.md §8](DESIGN.md#8-planned-job-assistant-continuation-contract). These are implementation contracts, not available features.
+
 Register through the [Adzuna developer portal](https://developer.adzuna.com/overview) to obtain an app ID and key. Configure `ADZUNA_APP_ID` and `ADZUNA_APP_KEY` only in the local server environment or uncommitted `.env`; these are the planned integration settings, not settings consumed by the current app. Never paste credentials into chat or use a `VITE_` prefix. Live AI matching also needs the existing `OPENAI_API_KEY` configuration below.
 
 The [Adzuna API terms](https://developer.adzuna.com/docs/terms_of_service) impose these constraints:
